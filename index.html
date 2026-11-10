@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lock-Off Alert</title>
+<meta name="description" content="Live water lock-offs, power outages, Flow and Digicel outages for every parish in Jamaica, reported by the community.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b2a5b">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lock-Off Alert">
+<style>
+  :root {
+    --bg: #f3f5f9; --card: #ffffff; --card2: #eef1f6; --line: #dde3ec;
+    --text: #101828; --muted: #5d6b82; --head: #0b2a5b; --headtext: #ffffff;
+    --jps: #ffc20e; --nwc: #0b3d91; --flow: #00a3e0; --digicel: #e4002b;
+    --off: #101828; --ok: #12925a; --warn: #b54708; --warnbg: #fff4e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0c111b; --card: #151c2a; --card2: #1d2637; --line: #29344a;
+      --text: #eef2f8; --muted: #93a1b8; --head: #0b1d3d; --off: #ffffff; --ok: #3ccf8e;
+      --warn: #ffb35c; --warnbg: #2a2116; --nwc: #3f7be0; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: var(--head); color: var(--headtext);
+    padding: calc(14px + env(safe-area-inset-top)) 16px 14px; }
+  .hwrap { max-width: 720px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  h1 { margin: 0; font-size: 21px; letter-spacing: .2px; display: flex; align-items: center; gap: 8px; }
+  h1 img { width: 28px; height: 28px; border-radius: 7px; }
+  #install { display: none; border: 0; background: var(--jps); color: #241a00; font: inherit; font-weight: 700;
+    font-size: 13px; padding: 7px 13px; border-radius: 999px; cursor: pointer; }
+  #install.show { display: block; }
+  .pick { margin-top: 12px; display: flex; gap: 8px; align-items: center; }
+  .pick label { font-size: 13px; opacity: .85; flex: none; }
+  select, input, textarea { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 10px; width: 100%; min-width: 0; }
+  header select { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.25); font-weight: 700; }
+  header select option { color: #101828; }
+  main { max-width: 720px; margin: 0 auto; padding: 14px 16px 40px; }
+  .banner { background: var(--warnbg); color: var(--warn); border-radius: 12px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+  .banner b { color: inherit; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 22px 2px 8px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+    position: relative; overflow: hidden; min-height: 112px; }
+  .tile::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: var(--c); }
+  .tile .svc { font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+  .tile .what { font-size: 16px; font-weight: 800; margin-top: 1px; }
+  .tile .st { margin-top: 10px; display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 14px; }
+  .tile .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .tile.off { border-color: var(--c); }
+  .tag { display: inline-block; font-size: 11px; font-weight: 900; letter-spacing: .6px; padding: 2px 7px; border-radius: 6px; }
+  .tag.offtag { background: var(--off); color: var(--bg); }
+  .tag.oktag { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+  .tag.plantag { background: var(--warnbg); color: var(--warn); }
+  .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--c); position: relative; flex: none; }
+  .pulse::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--c);
+    animation: ping 1.4s ease-out infinite; }
+  @keyframes ping { from { transform: scale(.5); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .pulse::after { animation: none; opacity: .5; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .report .row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center;
+    padding: 9px 0; border-top: 1px solid var(--line); }
+  .report .row:first-of-type { border-top: 0; }
+  .report .nm { display: flex; align-items: center; gap: 8px; font-weight: 700; min-width: 0; }
+  .dot { width: 12px; height: 12px; border-radius: 4px; background: var(--c); flex: none; }
+  .btn { border: 1px solid var(--line); background: var(--card2); color: var(--text); font: inherit; font-weight: 700;
+    font-size: 13px; padding: 8px 11px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+  .btn.gone { background: var(--off); color: var(--bg); border-color: var(--off); }
+  .btn.back { color: var(--ok); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primary { background: var(--nwc); color: #fff; border-color: var(--nwc); }
+  .comm { display: flex; gap: 8px; margin-bottom: 6px; }
+  .note { color: var(--muted); font-size: 12px; }
+  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: var(--off); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 14px;
+    opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); text-align: center; }
+  .toast.show { opacity: 1; }
+  .tabs { display: flex; gap: 4px; background: var(--card2); padding: 4px; border-radius: 12px; margin: 18px 0 10px; }
+  .tabs button { flex: 1; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 700;
+    font-size: 14px; padding: 8px 4px; border-radius: 9px; cursor: pointer; }
+  .tabs button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .notice .top, .feed .top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .notice h3 { margin: 6px 0 2px; font-size: 15px; }
+  .notice .when { font-weight: 700; font-size: 14px; }
+  .notice .areas { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .official { font-size: 11px; font-weight: 800; color: var(--ok); white-space: nowrap; }
+  .svcchip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; }
+  a { color: var(--nwc); }
+  @media (prefers-color-scheme: dark) { a { color: #7fb0ff; } }
+  .feed .item { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+  .feed .item:first-child { border-top: 0; }
+  .feed .item .t { flex: 1; min-width: 0; }
+  .feed .item .t div:first-child { font-weight: 700; font-size: 14px; }
+  .feed .item .t div:last-child { color: var(--muted); font-size: 12px; }
+  .empty { color: var(--muted); text-align: center; padding: 22px 8px; font-size: 14px; }
+  .share { width: 100%; margin-top: 12px; background: #128c4a; color: #fff; border-color: #128c4a; padding: 11px; font-size: 14px; }
+  .admin { display: none; }
+  .admin.show { display: block; }
+  .form { display: grid; gap: 8px; }
+  .form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form label { font-size: 12px; color: var(--muted); font-weight: 700; display: grid; gap: 4px; }
+  footer { color: var(--muted); font-size: 11px; text-align: center; padding: 6px 16px 30px; max-width: 720px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <div class="brand">
+      <h1><img src="icon-192.png" alt="">Lock-Off Alert</h1>
+      <button id="install">Install app</button>
+    </div>
+    <div class="pick">
+      <label for="parish">My parish</label>
+      <select id="parish"></select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="banner" id="demo" hidden><b>Demo mode.</b> These are sample reports so you can see how it works. Live reports start once Firebase is connected.</div>
+
+  <h2 id="statusTitle">Right now</h2>
+  <div class="grid" id="tiles"></div>
+  <button class="btn share" id="share">Share status on WhatsApp</button>
+
+  <h2>Report what's happening</h2>
+  <div class="card report">
+    <div class="comm">
+      <input id="community" list="communities" placeholder="Your community, e.g. Greater Portmore" maxlength="40" autocomplete="off">
+      <datalist id="communities"></datalist>
+    </div>
+    <div id="buttons"></div>
+    <div class="note" style="margin-top:6px">Reports are anonymous and show for 3 hours.</div>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="planned" class="on">Planned</button>
+    <button data-tab="live">Live reports</button>
+  </div>
+  <div id="list"></div>
+
+  <div class="banner" style="margin-top:14px">Only notices marked <b>✓ Official</b> come from posts by JPS or NWC, and each links to its source. Fake outage notices spread on WhatsApp, so check the source before you share.</div>
+
+  <section class="admin" id="admin">
+    <h2>Admin: post an official notice</h2>
+    <div class="card">
+      <div id="adminOut">
+        <button class="btn primary" id="signin">Sign in with Google</button>
+        <div class="note" style="margin-top:6px">Only the admin account can post notices.</div>
+      </div>
+      <form class="form" id="noticeForm" hidden>
+        <div class="two">
+          <label>Service<select name="service" required>
+            <option value="nwc">NWC water</option><option value="jps">JPS light</option>
+            <option value="flow">Flow</option><option value="digicel">Digicel</option></select></label>
+          <label>Parish<select name="parish" id="nparish" required></select></label>
+        </div>
+        <label>Headline<input name="title" required maxlength="90" placeholder="Pipeline repairs in Spanish Town"></label>
+        <label>Communities affected (comma separated)<textarea name="communities" rows="2" maxlength="600" placeholder="Ensom City, Sydenham, Willowdene"></textarea></label>
+        <div class="two">
+          <label>Date<input type="date" name="date" required></label>
+          <label>End date (if different)<input type="date" name="endDate"></label>
+        </div>
+        <div class="two">
+          <label>From<input type="time" name="start" required value="09:00"></label>
+          <label>Until<input type="time" name="end" required value="16:00"></label>
+        </div>
+        <label>Link to the official post (NWC site, JPS on X, etc.)<input type="url" name="source" required placeholder="https://"></label>
+        <button class="btn primary" type="submit">Post notice</button>
+        <div class="note"><span id="adminWho"></span> · <a href="#" id="signout">Sign out</a></div>
+      </form>
+    </div>
+  </section>
+</main>
+<footer>Lock-Off Alert is an independent community service. It is not affiliated with JPS, NWC, Flow or Digicel. Live reports come from the public and may be wrong. Planned notices are copied from official posts, so check the source link.</footer>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ======================================================================
+// 1. PASTE YOUR FIREBASE CONFIG HERE (Firebase console → Project settings
+//    → Your apps → Web app → "SDK setup and configuration" → Config).
+//    While apiKey is empty the app runs in demo mode with sample data.
+// ======================================================================
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+// ======================================================================
+
+const PARISHES = ["Kingston", "St Andrew", "St Catherine", "Clarendon", "Manchester", "St Elizabeth",
+  "Westmoreland", "Hanover", "St James", "Trelawny", "St Ann", "St Mary", "Portland", "St Thomas"];
+const SERVICES = {
+  jps:     { name: "JPS", what: "Light", gone: "Light gone", back: "Light back", offWord: "No light", c: "var(--jps)" },
+  nwc:     { name: "NWC", what: "Water", gone: "Water gone", back: "Water back", offWord: "No water", c: "var(--nwc)" },
+  flow:    { name: "Flow", what: "Internet & TV", gone: "Flow down", back: "Flow back", offWord: "Flow down", c: "var(--flow)" },
+  digicel: { name: "Digicel", what: "Mobile & data", gone: "Digicel down", back: "Digicel back", offWord: "Digicel down", c: "var(--digicel)" },
+};
+const STARTER = {
+  "Kingston": ["Downtown", "Allman Town", "Rae Town", "Franklin Town", "Rollington Town", "Tivoli Gardens", "Denham Town", "Port Royal", "Vineyard Town"],
+  "St Andrew": ["Half Way Tree", "New Kingston", "Constant Spring", "Papine", "Mona", "Liguanea", "Barbican", "Cherry Gardens", "Stony Hill", "Duhaney Park", "Pembroke Hall", "Washington Gardens", "Red Hills", "Meadowbrook", "August Town", "Hope Pastures", "Mountain View", "Harbour View", "Molynes"],
+  "St Catherine": ["Portmore", "Greater Portmore", "Waterford", "Edgewater", "Independence City", "Spanish Town", "Ensom City", "Willowdene", "Old Harbour", "Linstead", "Bog Walk", "Gregory Park", "Caymanas", "Old Harbour Bay", "Ewarton"],
+  "Clarendon": ["May Pen", "Hayes", "Lionel Town", "Chapelton", "Frankfield", "Four Paths", "Denbigh", "Mocho"],
+  "Manchester": ["Mandeville", "Christiana", "Porus", "Spaldings", "Williamsfield", "Newport", "Royal Flat"],
+  "St Elizabeth": ["Santa Cruz", "Black River", "Junction", "Malvern", "Balaclava", "Treasure Beach", "Southfield"],
+  "Westmoreland": ["Savanna-la-Mar", "Negril", "Frome", "Whitehouse", "Little London", "Grange Hill", "Bethel Town"],
+  "Hanover": ["Lucea", "Green Island", "Hopewell", "Sandy Bay", "Mount Peto"],
+  "St James": ["Montego Bay", "Granville", "Catherine Hall", "Flanker", "Rose Hall", "Ironshore", "Cambridge", "Anchovy", "Salt Spring", "Coral Gardens", "Mount Salem", "Fairfield", "Spring Gardens"],
+  "Trelawny": ["Falmouth", "Duncans", "Wakefield", "Clark's Town", "Albert Town", "Rock", "Wait-a-Bit"],
+  "St Ann": ["Ocho Rios", "St Ann's Bay", "Brown's Town", "Discovery Bay", "Runaway Bay", "Moneague", "Claremont", "Exchange"],
+  "St Mary": ["Port Maria", "Annotto Bay", "Highgate", "Oracabessa", "Gayle", "Richmond", "Islington"],
+  "Portland": ["Port Antonio", "Buff Bay", "Hope Bay", "Manchioneal", "Boston", "Long Bay"],
+  "St Thomas": ["Morant Bay", "Yallahs", "Seaforth", "Bath", "Golden Grove", "Port Morant", "Bull Bay"],
+};
+const LIVE_HOURS = 3;
+const COOLDOWN_MIN = 10;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store_get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const store_set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const JA = { timeZone: "America/Jamaica" };
+const fmtTime = ms => new Date(ms).toLocaleTimeString("en-JM", { ...JA, hour: "numeric", minute: "2-digit" });
+const fmtDay = ms => {
+  const d = new Date(ms), now = new Date();
+  const key = x => x.toLocaleDateString("en-CA", JA);
+  if (key(d) === key(now)) return "Today";
+  if (key(d) === key(new Date(now.getTime() + 864e5))) return "Tomorrow";
+  return d.toLocaleDateString("en-JM", { ...JA, weekday: "short", day: "numeric", month: "short" });
+};
+const ago = ms => { const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} hr ago`; };
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+// ---------------------------------------------------------------- data store
+let reports = [], notices = [];
+let store;
+
+function demoStore() {
+  $("demo").hidden = false;
+  const now = Date.now(), min = 60000;
+  let seed = [
+    ["nwc", "off", "St Catherine", "Greater Portmore", 25], ["nwc", "off", "St Catherine", "Greater Portmore", 40],
+    ["nwc", "off", "St Catherine", "Waterford", 55], ["jps", "off", "St Catherine", "Spanish Town", 12],
+    ["jps", "on", "St Catherine", "Spanish Town", 4], ["flow", "off", "St Catherine", "Edgewater", 33],
+    ["jps", "off", "St Andrew", "Duhaney Park", 18], ["digicel", "off", "St James", "Montego Bay", 22],
+    ["nwc", "off", "Kingston", "Allman Town", 70],
+  ].map(([service, state, parish, community, m], i) => ({ id: "d" + i, service, state, parish, community, uid: "demo" + i, at: now - m * min }));
+  const day = new Date().toLocaleDateString("en-CA", JA);
+  const tomorrow = new Date(now + 864e5).toLocaleDateString("en-CA", JA);
+  const t = (d, hm) => new Date(`${d}T${hm}:00-05:00`).getTime();
+  let nseed = [
+    { id: "n1", service: "nwc", parish: "St Catherine", title: "Pipeline repairs (sample notice)",
+      communities: "Ensom City, Willowdene, Sydenham", start: t(tomorrow, "09:00"), end: t(tomorrow, "16:00"), source: "https://www.nwcjamaica.com/advisories.php" },
+    { id: "n2", service: "jps", parish: "St Andrew", title: "Planned maintenance (sample notice)",
+      communities: "Red Hills, Meadowbrook", start: t(day, "08:00"), end: t(day, "23:00"), source: "https://x.com/myJPSonline" },
+  ];
+  let rcb = () => {}, ncb = () => {};
+  return {
+    mode: "demo",
+    uid: "me",
+    subscribeReports(cb) { rcb = cb; cb(seed); },
+    subscribeNotices(cb) { ncb = cb; cb(nseed); },
+    async addReport(r) { seed = [{ ...r, id: "x" + Math.random(), uid: "me", at: Date.now() }, ...seed]; rcb(seed); },
+    async addNotice(n) { nseed = [...nseed, { ...n, id: "x" + Math.random() }]; ncb(nseed); },
+    async deleteNotice(id) { nseed = nseed.filter(n => n.id !== id); ncb(nseed); },
+    async signIn() { return { email: "demo@example.com" }; },
+    async signOut() {},
+    onUser(cb) { cb(null); },
+  };
+}
+
+async function firebaseStore() {
+  const V = "10.12.2", base = `https://www.gstatic.com/firebasejs/${V}/`;
+  const [{ initializeApp }, A, F] = await Promise.all([
+    import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
+  const app = initializeApp(FIREBASE_CONFIG);
+  const auth = A.getAuth(app), db = F.getFirestore(app);
+  let uid = null;
+  const ready = new Promise(res => A.onAuthStateChanged(auth, u => {
+    if (u) { uid = u.uid; res(u); } else A.signInAnonymously(auth).catch(e => { console.error(e); res(null); });
+  }));
+  const ms = ts => ts && ts.toMillis ? ts.toMillis() : Date.now();
+  return {
+    mode: "live",
+    get uid() { return uid; },
+    subscribeReports(cb) {
+      const since = F.Timestamp.fromMillis(Date.now() - LIVE_HOURS * 3600e3 - 3600e3);
+      const q = F.query(F.collection(db, "reports"), F.where("createdAt", ">", since), F.orderBy("createdAt", "desc"), F.limit(1000));
+      F.onSnapshot(q, snap => cb(snap.docs.map(d => {
+        const x = d.data({ serverTimestamps: "estimate" });
+        return { id: d.id, service: x.service, state: x.state, parish: x.parish, community: x.community, uid: x.uid, at: ms(x.createdAt) };
+      })), e => { console.error(e); toast("Couldn't load live reports"); });
+    },
+    subscribeNotices(cb) {
+      const q = F.query(F.collection(db, "notices"), F.where("end", ">", F.Timestamp.now()), F.orderBy("end"), F.limit(300));
+      F.onSnapshot(q, snap => cb(snap.docs.map(d => {
+        const x = d.data();
+        return { id: d.id, service: x.service, parish: x.parish, title: x.title, communities: x.communities,
+                 start: ms(x.start), end: ms(x.end), source: x.source };
+      })), e => console.error(e));
+    },
+    async addReport(r) {
+      await ready;
+      await F.addDoc(F.collection(db, "reports"), { ...r, uid: auth.currentUser.uid, createdAt: F.serverTimestamp() });
+    },
+    async addNotice(n) {
+      await F.addDoc(F.collection(db, "notices"), {
+        service: n.service, parish: n.parish, title: n.title, communities: n.communities, source: n.source,
+        start: F.Timestamp.fromMillis(n.start), end: F.Timestamp.fromMillis(n.end), createdAt: F.serverTimestamp() });
+    },
+    async deleteNotice(id) { await F.deleteDoc(F.doc(db, "notices", id)); },
+    async signIn() {
+      const p = new A.GoogleAuthProvider();
+      try { return (await A.signInWithPopup(auth, p)).user; }
+      catch (e) { if (String(e.code).includes("popup")) return A.signInWithRedirect(auth, p); throw e; }
+    },
+    async signOut() { await A.signOut(auth); },
+    onUser(cb) { A.onAuthStateChanged(auth, u => cb(u && !u.isAnonymous ? u : null)); },
+  };
+}
+
+// ---------------------------------------------------------------- status logic
+// For each community: compare the latest "gone" report with the latest "back" report.
+// A community is OFF if its latest report says gone (and it's recent).
+function communityStatus(parish, service) {
+  const cutoff = Date.now() - LIVE_HOURS * 3600e3;
+  const by = new Map();
+  for (const r of reports) {
+    if (r.parish !== parish || r.service !== service || r.at < cutoff) continue;
+    const key = r.community.trim().toLowerCase() || "(somewhere in " + parish + ")";
+    const c = by.get(key) || { name: r.community.trim() || "Unspecified area", off: 0, on: 0, lastOff: 0, lastOn: 0 };
+    if (r.state === "off") { c.off++; c.lastOff = Math.max(c.lastOff, r.at); }
+    else { c.on++; c.lastOn = Math.max(c.lastOn, r.at); }
+    by.set(key, c);
+  }
+  return [...by.values()].map(c => ({ ...c, isOff: c.lastOff > c.lastOn }));
+}
+
+function activeNotices(parish, service) {
+  const now = Date.now();
+  return notices.filter(n => n.parish === parish && n.service === service && n.start <= now && n.end > now);
+}
+
+function nextNotice(parish, service) {
+  const now = Date.now(), soon = now + 2 * 864e5;
+  return notices.filter(n => n.parish === parish && n.service === service && n.start > now && n.start < soon)
+    .sort((a, b) => a.start - b.start)[0];
+}
+
+// ---------------------------------------------------------------- render
+let parish = store_get("parish", "St Andrew");
+let tab = "planned";
+
+function renderTiles() {
+  $("statusTitle").textContent = `Right now in ${parish}`;
+  $("tiles").innerHTML = Object.entries(SERVICES).map(([k, s]) => {
+    const comms = communityStatus(parish, k), off = comms.filter(c => c.isOff);
+    const planned = activeNotices(parish, k), next = nextNotice(parish, k);
+    let st, sub = "", cls = "";
+    if (off.length) {
+      cls = "off";
+      const reportsN = off.reduce((a, c) => a + c.off, 0);
+      st = `<span class="pulse"></span><span class="tag offtag">OFF</span><span>${off.length} area${off.length > 1 ? "s" : ""}</span>`;
+      sub = `${off.slice(0, 2).map(c => esc(c.name)).join(", ")}${off.length > 2 ? "…" : ""} · ${reportsN} report${reportsN > 1 ? "s" : ""}`;
+    } else if (planned.length) {
+      cls = "off";
+      st = `<span class="pulse"></span><span class="tag plantag">PLANNED</span>`;
+      sub = `Until ${fmtTime(planned[0].end)} · ${esc(planned[0].communities.split(",")[0])}…`;
+    } else {
+      st = `<span class="tag oktag">ALL CLEAR</span>`;
+      sub = comms.length ? `${comms.length} area${comms.length > 1 ? "s" : ""} reported back on` : "No reports";
+    }
+    if (next && !planned.length) sub += ` · Planned ${fmtDay(next.start).toLowerCase()} ${fmtTime(next.start)}`;
+    return `<div class="tile ${cls}" style="--c:${s.c}"><div class="svc">${s.name}</div><div class="what">${s.what}</div>
+      <div class="st">${st}</div><div class="sub">${sub}</div></div>`;
+  }).join("");
+}
+
+function renderButtons() {
+  const last = store_get("lastReport", {});
+  $("buttons").innerHTML = Object.entries(SERVICES).map(([k, s]) => {
+    const wait = last[k] && Date.now() - last[k] < COOLDOWN_MIN * 60000;
+    return `<div class="row"><div class="nm"><span class="dot" style="--c:${s.c}"></span>${s.what}</div>
+      <button class="btn gone" data-r="${k}:off" ${wait ? "disabled" : ""}>${s.gone}</button>
+      <button class="btn back" data-r="${k}:on" ${wait ? "disabled" : ""}>${s.back}</button></div>`;
+  }).join("");
+}
+
+function renderCommunities() {
+  const set = new Set(STARTER[parish] || []);
+  reports.filter(r => r.parish === parish && r.community).forEach(r => set.add(r.community.trim()));
+  $("communities").innerHTML = [...set].sort().map(c => `<option value="${esc(c)}">`).join("");
+}
+
+function noticeCard(n, admin) {
+  const s = SERVICES[n.service], now = Date.now(), live = n.start <= now && n.end > now;
+  const sameDay = fmtDay(n.start) === fmtDay(n.end);
+  const when = `${fmtDay(n.start)} ${fmtTime(n.start)} – ${sameDay ? "" : fmtDay(n.end) + " "}${fmtTime(n.end)}`;
+  let safeUrl = "#";
+  try { const u = new URL(n.source); if (u.protocol === "https:" || u.protocol === "http:") safeUrl = u.href; } catch (e) {}
+  return `<div class="card notice" style="--c:${s.c}">
+    <div class="top"><span class="svcchip"><span class="dot"></span>${s.name} · ${s.what}</span>
+      <span class="official">✓ Official</span></div>
+    <h3>${esc(n.title)}</h3>
+    <div class="when">${live ? `<span class="tag plantag">ON NOW</span> ` : ""}${esc(when)}</div>
+    ${n.communities ? `<div class="areas">${esc(n.communities)}</div>` : ""}
+    <div class="note" style="margin-top:6px"><a href="${esc(safeUrl)}" target="_blank" rel="noopener">See official source ↗</a>
+    ${admin ? ` · <a href="#" data-del="${esc(n.id)}">Delete</a>` : ""}</div>
+  </div>`;
+}
+
+function renderList() {
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  if (tab === "planned") {
+    const list = notices.filter(n => n.parish === parish && n.end > Date.now()).sort((a, b) => a.start - b.start);
+    $("list").innerHTML = list.length ? list.map(n => noticeCard(n, isAdmin)).join("")
+      : `<div class="card empty">No planned lock-offs or outages posted for ${esc(parish)} right now.</div>`;
+  } else {
+    const cutoff = Date.now() - LIVE_HOURS * 3600e3;
+    const list = reports.filter(r => r.parish === parish && r.at >= cutoff).sort((a, b) => b.at - a.at).slice(0, 60);
+    $("list").innerHTML = list.length ? `<div class="card feed">` + list.map(r => {
+      const s = SERVICES[r.service];
+      return `<div class="item"><span class="dot" style="--c:${s.c}"></span><div class="t">
+        <div>${r.state === "off" ? s.gone : s.back}</div>
+        <div>${esc(r.community || "Unspecified area")} · ${ago(r.at)}</div></div>
+        ${r.state === "off" ? `<span class="tag offtag">OFF</span>` : `<span class="tag oktag">BACK</span>`}</div>`;
+    }).join("") + `</div>` : `<div class="card empty">No reports in ${esc(parish)} in the last ${LIVE_HOURS} hours.</div>`;
+  }
+}
+
+function render() { renderTiles(); renderButtons(); renderCommunities(); renderList(); }
+
+// ---------------------------------------------------------------- actions
+$("parish").innerHTML = PARISHES.map(p => `<option ${p === parish ? "selected" : ""}>${p}</option>`).join("");
+$("nparish").innerHTML = PARISHES.map(p => `<option>${p}</option>`).join("");
+$("community").value = store_get("community:" + parish, "");
+$("parish").onchange = e => {
+  parish = e.target.value; store_set("parish", parish);
+  $("community").value = store_get("community:" + parish, ""); render();
+};
+document.querySelector(".tabs").onclick = e => { const b = e.target.closest("button"); if (b) { tab = b.dataset.tab; renderList(); } };
+
+$("buttons").onclick = async e => {
+  const b = e.target.closest("[data-r]"); if (!b) return;
+  const [service, state] = b.dataset.r.split(":");
+  const community = $("community").value.trim().slice(0, 40);
+  if (!community) { $("community").focus(); toast("Type your community first"); return; }
+  store_set("community:" + parish, community);
+  const last = store_get("lastReport", {});
+  last[service] = Date.now(); store_set("lastReport", last);
+  renderButtons();
+  try {
+    await store.addReport({ service, state, parish, community });
+    toast(`Thanks! "${state === "off" ? SERVICES[service].gone : SERVICES[service].back}" reported for ${community}`);
+  } catch (err) {
+    console.error(err); delete last[service]; store_set("lastReport", last); renderButtons();
+    toast("Couldn't send. Check your connection and try again.");
+  }
+};
+
+$("share").onclick = () => {
+  const lines = Object.entries(SERVICES).map(([k, s]) => {
+    const off = communityStatus(parish, k).filter(c => c.isOff), planned = activeNotices(parish, k);
+    if (off.length) return `🔴 ${s.offWord}: ${off.map(c => c.name).join(", ")}`;
+    if (planned.length) return `🟠 ${s.name} planned outage until ${fmtTime(planned[0].end)}`;
+    return `🟢 ${s.what}: all clear`;
+  });
+  const text = `Lock-Off Alert · ${parish} · ${fmtTime(Date.now())}\n${lines.join("\n")}\n\nLive updates: ${location.href.split("#")[0]}`;
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
+};
+
+// ---------------------------------------------------------------- admin (open the site with #admin)
+let isAdmin = false;
+function setupAdmin() {
+  const show = location.hash === "#admin";
+  $("admin").classList.toggle("show", show);
+  if (!show) return;
+  $("admin").scrollIntoView({ behavior: "smooth" });
+}
+window.addEventListener("hashchange", setupAdmin);
+$("signin").onclick = async () => { try { await store.signIn(); if (store.mode === "demo") adminUser({ email: "demo admin" }); } catch (e) { toast("Sign-in failed"); console.error(e); } };
+$("signout").onclick = async e => { e.preventDefault(); await store.signOut(); adminUser(null); };
+function adminUser(u) {
+  isAdmin = !!u;
+  $("adminOut").hidden = !!u; $("noticeForm").hidden = !u;
+  $("adminWho").textContent = u ? `Signed in as ${u.email}` : "";
+  renderList();
+}
+$("noticeForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData(e.target));
+  const start = new Date(`${f.date}T${f.start}:00-05:00`).getTime();
+  const end = new Date(`${f.endDate || f.date}T${f.end}:00-05:00`).getTime();
+  if (!(end > start)) { toast("The end time must be after the start"); return; }
+  try {
+    await store.addNotice({ service: f.service, parish: f.parish, title: f.title.trim(),
+      communities: f.communities.trim(), source: f.source.trim(), start, end });
+    e.target.reset(); toast("Notice posted");
+  } catch (err) { console.error(err); toast("Not allowed. Is this the admin account?"); }
+};
+$("list").onclick = async e => {
+  const d = e.target.closest("[data-del]"); if (!d) return;
+  e.preventDefault();
+  if (!confirm("Delete this notice?")) return;
+  try { await store.deleteNotice(d.dataset.del); toast("Deleted"); } catch (err) { toast("Couldn't delete"); }
+};
+
+// ---------------------------------------------------------------- start
+(async () => {
+  try { store = FIREBASE_CONFIG.apiKey ? await firebaseStore() : demoStore(); }
+  catch (e) { console.error(e); toast("Couldn't connect, showing demo"); store = demoStore(); }
+  store.subscribeReports(r => { reports = r; render(); });
+  store.subscribeNotices(n => { notices = n; render(); });
+  store.onUser(u => adminUser(u));
+  setupAdmin();
+  render();
+  setInterval(render, 60000);   // statuses age out over time
+})();
+
+// ---------------------------------------------------------------- installable app
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+let installPrompt = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; $("install").classList.add("show"); });
+$("install").onclick = async () => { if (!installPrompt) return; installPrompt.prompt(); await installPrompt.userChoice.catch(() => {}); installPrompt = null; $("install").classList.remove("show"); };
+addEventListener("appinstalled", () => $("install").classList.remove("show"));
+</script>
+</body>
+</html>

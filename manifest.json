@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Lock-Off Alert",
+  "short_name": "Lock-Off Alert",
+  "description": "Live water lock-offs, power outages, Flow and Digicel outages for every parish in Jamaica.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b2a5b",
+  "theme_color": "#0b2a5b",
+  "categories": ["utilities", "news"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
